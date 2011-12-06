@@ -1,0 +1,11 @@
+Roadrunner
+====================
+
+Roadrunner is a job flow manager as well as scheduler.
+You can create job flows and then schedule them to run immediately or at a particular time.
+
+Example use case:
+1. Deploy code to all the api hosts and if the job succeeds, then deploy to all the frontend hosts.
+2. scp some files from certain hosts to a central host and if that succeeds on atleast 80% of the hosts, then run a consolidation script on the central host having all the copied files.
+
+
