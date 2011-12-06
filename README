@@ -1,8 +1,7 @@
 Roadrunner
 ====================
 
-Roadrunner is a job flow executor. You can submit a job flow (in the form of a json file) to Roadrunner and it will run the jobs
-is the given flow and return the status to the contact person via email.
+Roadrunner is a job flow executor. You can submit a job flow (in the form of a json file) to Roadrunner and it will run the jobs in the order given in the flow and return the status and output to the contact person via email.
 
 Example use case:
 1. Deploy code to all the api hosts and if the job succeeds, then deploy to all the frontend hosts.
