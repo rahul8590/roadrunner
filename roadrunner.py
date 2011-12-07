@@ -51,35 +51,64 @@ def get_job_flow_config(json_file):
 
 
 #
+# Check to see if a key exists in a dictionary
+# If yes, return it's value or return None
+#
+def get_dict_val(key, dic):
+	if(dic.has_key(key)):
+		return dic[key]
+	return None
+
+
+#
 # Run the jobs according to the job flow
 #
 def run_jobs(job_flow_config):
 	global l
 
-	output_plugin = job_flow_config['output_plugin']
-	flow = job_flow_config['job_flow']
-	for slot in flow:
-		jobs = slot['jobs']
-		for job in jobs:
-			job_id = job['job_id']
-			cmd = job['cmd']
-			hosts = job['hosts']
-			if(job.has_key('timeout')):
-				timeout = job['timeout']
-			else:
-				timeout = job_flow_config['default_job_timeout']
-			if(job.has_key('retries')):
-				retries = job['retries']
-			else:
-				retries = job_flow_config['default_retries']
-			if(job.has_key('parallelism')):
-				parallelism = job['parallelism']
-			else:
-				parallelism = None
-			success_constraint = job['success_constraint']
+	# Mandatory fields required in a job flow config
+	output_plugin = get_dict_val('output_plugin', job_flow_config)
+	flow = get_dict_val('job_flow', job_flow_config)
+	default_timeout = get_dict_val('default_job_timeout', job_flow_config)
+	default_retries = get_dict_val('default_retries', job_flow_config)
 
-			l.debug("slot: " + str(slot['slot']) + ", job_id: " + job['job_id'] +
-			", timeout: " + str(timeout) + ", retries: " + str(retries) +
+	if(not (output_plugin and flow and default_timeout and default_retries)):
+		l.error("There is an error in your job flow config file. Please ensure that all mandatory fields are present")
+		sys.exit(1)
+
+	for slot in flow:
+		# Mandatory fields for slot
+		jobs = get_dict_val('jobs', slot)
+		slot_id = get_dict_val('slot_id', slot)
+
+		if(not (jobs and slot_id)):
+			l.error("There is an error in your job flow config file. Please ensure that all mandatory fields are present")
+			sys.exit(1)
+
+		for job in jobs:
+			# Mandatory fields that need to be present (for a job)
+			job_id = get_dict_val('job_id', job)
+			cmd = get_dict_val('cmd', job)
+			hosts = get_dict_val('hosts', job)
+
+			if(not (job_id and cmd and hosts)):
+				l.error("There is an error in your job flow config file. Please ensure that all mandatory fields are present")
+				sys.exit(1)
+
+			# Optional params
+			timeout = get_dict_val('timeout', job)
+			if(timeout == None):
+				timeout = default_timeout
+			retries = get_dict_val('retries', job)
+			if(retries == None):
+				retries = default_retries
+			success_constraint = get_dict_val('success_constraint', job)
+			if(success_constraint == None):
+				success_constraint = "100%"
+			parallelism = get_dict_val('parallelism', job)
+
+			l.debug("slot_id: " + slot_id + ", job_id: " + job_id +
+			", timeout: " + timeout + ", retries: " + retries +
 			", success_constraint: " + success_constraint +
 			", parallelism: " + str(parallelism) + ", cmd: " + cmd + ", hosts: " + str(hosts))
 
