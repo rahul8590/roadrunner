@@ -18,6 +18,7 @@ l = None  # Logger variable
 #
 def set_logger(log_level):
 	global l
+
 	l = logging.getLogger('roadrunner')
 	handler = logging.StreamHandler()
 	formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
@@ -32,6 +33,7 @@ def set_logger(log_level):
 #
 def get_job_flow_config(json_file):
 	global l
+
 	job_flow_config = None
 	try:
 		f = open(os.path.abspath(json_file), 'r')
@@ -54,16 +56,26 @@ def get_job_flow_config(json_file):
 #
 def run_fabric_job(hosts, cmd, retries, timeout, parallelism):
 	global l
-	fabric_cmd = "fab -H " + hosts + " -f ./tests/test_fabfile.py"
+
+	# Build the fabric command
+	fabric_cmd = "fab -H " + ",".join(hosts) + " -f ./tests/test_fabfile.py --linewise"
 	if(parallelism):
 		fabric_cmd += " -z " + str(parallelism)
 	fabric_cmd += " runcmd:'" + cmd + "'"
+
 	l.debug("Running fabric command: " + fabric_cmd)
-	p = subprocess.Popen([fabric_cmd], bufsize=2048, shell=True,
-			stdin=subprocess.PIPE, stdout=subprocess.PIPE, close_fds=True)
+
+	# Run the command as a subprocess and get it's output
+	# The stderr is redirected to the stdout
+	p = subprocess.Popen(fabric_cmd, bufsize=2048, shell=True,
+			stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
 	p.wait()
-	print p.stdout.read()
+	output = p.stdout.read()
 	
+	# Stream the output to the plugin
+	pluginp = subprocess.Popen("./plugins/simpleout.py", bufsize=2048, shell=True,
+			stdin=subprocess.PIPE)
+	pluginp.communicate(output)
 
 #
 # Run the jobs according to the job flow
@@ -71,6 +83,7 @@ def run_fabric_job(hosts, cmd, retries, timeout, parallelism):
 #
 def run_jobs(job_flow_config):
 	global l
+
 	flow = job_flow_config['job_flow'];
 	for slot in flow:
 		job_pool = Pool()
@@ -78,6 +91,7 @@ def run_jobs(job_flow_config):
 		for job in jobs:
 			job_id = job['job_id']
 			cmd = job['cmd']
+			hosts = job['hosts']
 			if(job.has_key('timeout')):
 				timeout = job['timeout']
 			else:
@@ -85,20 +99,19 @@ def run_jobs(job_flow_config):
 			if(job.has_key('retries')):
 				retries = job['retries']
 			else:
-				retries = job_flow_config['default_num_retries']
+				retries = job_flow_config['default_retries']
 			if(job.has_key('parallelism')):
 				parallelism = job['parallelism']
 			else:
 				parallelism = None
-			hosts = ','.join(job['hosts'])
 			success_constraint = job['success_constraint']
 
 			l.debug("slot: " + str(slot['slot']) + ", job_id: " + job['job_id'] +
 			", timeout: " + str(timeout) + ", retries: " + str(retries) +
 			", success_constraint: " + success_constraint +
-			", parallelism: " + str(parallelism) + ", cmd: " + cmd + ", hosts: " + hosts)
+			", parallelism: " + str(parallelism) + ", cmd: " + cmd + ", hosts: " + str(hosts))
 	
-			# Add jobs to the pool
+			# Add jobs to the pool (run the actual fabric commands)
 			job_pool.apply_async(run_fabric_job, (hosts, cmd, retries, timeout, parallelism))
 
 		job_pool.close()
