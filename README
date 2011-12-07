@@ -3,6 +3,13 @@ Roadrunner
 
 Roadrunner is a job flow executor. You can submit a job flow (in the form of a json file) to Roadrunner and it will run the jobs in the order given in the flow and return the status and output to the contact person via email.
 
-Example use case:
+Example use cases
+====================
 1. Deploy code to all the api hosts and if the job succeeds, then deploy to all the frontend hosts.
 2. scp some files from certain hosts to a central host and if that succeeds on atleast 80% of the hosts, then run a consolidation script on the central host having all the copied files.
+
+How Roadrunner works
+=====================
+A roadrunner job flow consists of the following parts:
+1. Slot: A slot is a container that holds a set of jobs together. All the jobs in a single slot will run in parallel. For example, consider that case you want to run command X on a set of hosts and a command Y on another set of hosts, and if both these jobs succeed, only then run command Z on another set of hosts. In such a case, we can easily run first two jobs in the same slot (in case they are independent of the outcome of the other job) and then run the third job in another slot.
+2. Jobs: The jobs are nothing but a set of commands that are required to be run on a host or a set of hosts. The jobs in the same slot are run in parallel using Fabric. The output of the jobs are piped to output plugins. Custom plugins can be written by anyone.
