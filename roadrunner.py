@@ -3,14 +3,13 @@ import os
 import json
 import logging
 import sys
-import subprocess
-from multiprocessing import Pool
 
 
 #
 # Global variables
 #
 l = None  # Logger variable
+plugin_directory = "./plugins"
 
 
 #
@@ -52,41 +51,14 @@ def get_job_flow_config(json_file):
 
 
 #
-# Run a fabric job with the given arguments
-#
-def run_fabric_job(hosts, cmd, retries, timeout, parallelism):
-	global l
-
-	# Build the fabric command
-	fabric_cmd = "fab -H " + ",".join(hosts) + " -f ./tests/test_fabfile.py --linewise"
-	if(parallelism):
-		fabric_cmd += " -z " + str(parallelism)
-	fabric_cmd += " runcmd:'" + cmd + "'"
-
-	l.debug("Running fabric command: " + fabric_cmd)
-
-	# Run the command as a subprocess and get it's output
-	# The stderr is redirected to the stdout
-	p = subprocess.Popen(fabric_cmd, bufsize=2048, shell=True,
-			stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, close_fds=True)
-	p.wait()
-	output = p.stdout.read()
-	
-	# Stream the output to the plugin
-	pluginp = subprocess.Popen("./plugins/simpleout.py", bufsize=2048, shell=True,
-			stdin=subprocess.PIPE)
-	pluginp.communicate(output)
-
-#
 # Run the jobs according to the job flow
-# Use fabric to run the jobs
 #
 def run_jobs(job_flow_config):
 	global l
 
-	flow = job_flow_config['job_flow'];
+	output_plugin = job_flow_config['output_plugin']
+	flow = job_flow_config['job_flow']
 	for slot in flow:
-		job_pool = Pool()
 		jobs = slot['jobs']
 		for job in jobs:
 			job_id = job['job_id']
@@ -110,12 +82,6 @@ def run_jobs(job_flow_config):
 			", timeout: " + str(timeout) + ", retries: " + str(retries) +
 			", success_constraint: " + success_constraint +
 			", parallelism: " + str(parallelism) + ", cmd: " + cmd + ", hosts: " + str(hosts))
-	
-			# Add jobs to the pool (run the actual fabric commands)
-			job_pool.apply_async(run_fabric_job, (hosts, cmd, retries, timeout, parallelism))
-
-		job_pool.close()
-		job_pool.join()
 
 
 #
