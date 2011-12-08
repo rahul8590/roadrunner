@@ -12,8 +12,8 @@
 					"parallelism": "50%",
 					"cmd": "ls -l txt; uname -a",
 					"hosts": [
-						"ops2.media.corp.mud.yahoo.com",
-						"opsdev1.media.corp.sp1.yahoo.com"
+						"localhost",
+						"localhost"
 					]
 				},
 				{
@@ -21,7 +21,7 @@
 					"success_constraint": "100%",
 					"cmd": "ls -l",
 					"hosts": [
-						"opsdev1.media.corp.sp1.yahoo.com"
+						"localhost"
 					]
 				}
 			]
