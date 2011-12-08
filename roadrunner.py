@@ -10,7 +10,6 @@ import argparse
 # Global variables
 #
 l = None  # Logger variable
-plugin_directory = "./plugins"
 
 
 #
@@ -18,13 +17,13 @@ plugin_directory = "./plugins"
 #
 def set_logger(log_level):
 	global l
-
 	l = logging.getLogger('roadrunner')
 	handler = logging.StreamHandler()
 	formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
 	handler.setFormatter(formatter)
 	l.addHandler(handler)
-	l.setLevel(log_level)
+	if(log_level):
+		l.setLevel(log_level)
 
 
 #
@@ -33,7 +32,6 @@ def set_logger(log_level):
 #
 def get_job_flow_config(json_file):
 	global l
-
 	job_flow_config = None
 	try:
 		f = open(os.path.abspath(json_file), 'r')
@@ -56,6 +54,7 @@ def get_job_flow_config(json_file):
 # If yes, return it's value or return None
 #
 def get_dict_val(key, dic, exit_on_error=False):
+	global l
 	if(dic.has_key(key)):
 		return dic[key]
 	else:
@@ -112,11 +111,10 @@ def run_jobs(job_flow_config):
 #
 def parse_args():
 	global l
-
 	args = sys.argv
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--jobflow', action='store', nargs=1, help='The path to the jobflow config file')
-	parser.add_argument('--loglevel', action='store', nargs='?', help='The level of log output that should be shown on the screen - INFO, DEBUG, ERROR, WARNING, CRITICAL')
+	parser.add_argument('--debug', action='store_true', default=None, help='Print debug output')
 	return parser.parse_args(args[1:])
 
 
@@ -125,14 +123,13 @@ def parse_args():
 #
 def main():
 	pargs = parse_args() # Args after being parsed
-	print pargs
 
-	# Set the default logging level
-	loglevels = { "INFO": logging.INFO, "DEBUG": logging.DEBUG, "WARNING": logging.WARNING, "CRITICAL": logging.CRITICAL, "ERROR": logging.ERROR }
-	if(pargs.loglevel) and (loglevels.has_key(pargs.loglevel)):
-		set_logger(loglevels[pargs.loglevel])
+	# Check to see if --debug is specified
+	if(pargs.debug):
+		log_level = logging.DEBUG
 	else:
-		set_logger(logging.DEBUG)
+		log_level = None
+	set_logger(log_level)
 
 	# Check if all the mandatory options/arguments are specified or not
 	if(not pargs.jobflow):
