@@ -3,6 +3,7 @@ import os
 import json
 import logging
 import sys
+import argparse
 
 
 #
@@ -54,10 +55,15 @@ def get_job_flow_config(json_file):
 # Check to see if a key exists in a dictionary
 # If yes, return it's value or return None
 #
-def get_dict_val(key, dic):
+def get_dict_val(key, dic, exit_on_error=False):
 	if(dic.has_key(key)):
 		return dic[key]
-	return None
+	else:
+		if(exit_on_error):
+			l.error("Key: " + key + " not found. Please make sure it is present!")
+			sys.exit(1)
+		else:
+			return None
 
 
 #
@@ -67,33 +73,21 @@ def run_jobs(job_flow_config):
 	global l
 
 	# Mandatory fields required in a job flow config
-	output_plugin = get_dict_val('output_plugin', job_flow_config)
-	flow = get_dict_val('job_flow', job_flow_config)
-	default_timeout = get_dict_val('default_job_timeout', job_flow_config)
-	default_retries = get_dict_val('default_retries', job_flow_config)
-
-	if(not (output_plugin and flow and default_timeout and default_retries)):
-		l.error("There is an error in your job flow config file. Please ensure that all mandatory fields are present")
-		sys.exit(1)
+	output_plugin = get_dict_val('output_plugin', job_flow_config, True)
+	flow = get_dict_val('job_flow', job_flow_config, True)
+	default_timeout = get_dict_val('default_job_timeout', job_flow_config, True)
+	default_retries = get_dict_val('default_retries', job_flow_config, True)
 
 	for slot in flow:
 		# Mandatory fields for slot
-		jobs = get_dict_val('jobs', slot)
-		slot_id = get_dict_val('slot_id', slot)
-
-		if(not (jobs and slot_id)):
-			l.error("There is an error in your job flow config file. Please ensure that all mandatory fields are present")
-			sys.exit(1)
+		jobs = get_dict_val('jobs', slot, True)
+		slot_id = get_dict_val('slot_id', slot, True)
 
 		for job in jobs:
 			# Mandatory fields that need to be present (for a job)
-			job_id = get_dict_val('job_id', job)
-			cmd = get_dict_val('cmd', job)
-			hosts = get_dict_val('hosts', job)
-
-			if(not (job_id and cmd and hosts)):
-				l.error("There is an error in your job flow config file. Please ensure that all mandatory fields are present")
-				sys.exit(1)
+			job_id = get_dict_val('job_id', job, True)
+			cmd = get_dict_val('cmd', job, True)
+			hosts = get_dict_val('hosts', job, True)
 
 			# Optional params
 			timeout = get_dict_val('timeout', job)
@@ -114,11 +108,38 @@ def run_jobs(job_flow_config):
 
 
 #
+# Parse commandline arguments
+#
+def parse_args():
+	global l
+
+	args = sys.argv
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--jobflow', action='store', nargs=1, help='The path to the jobflow config file')
+	parser.add_argument('--loglevel', action='store', nargs='?', help='The level of log output that should be shown on the screen - INFO, DEBUG, ERROR, WARNING, CRITICAL')
+	return parser.parse_args(args[1:])
+
+
+#
 # main function
 #
 def main():
-	set_logger(logging.DEBUG)
-	job_flow_config = get_job_flow_config("./tests/test_flow.json")
+	pargs = parse_args() # Args after being parsed
+	print pargs
+
+	# Set the default logging level
+	loglevels = { "INFO": logging.INFO, "DEBUG": logging.DEBUG, "WARNING": logging.WARNING, "CRITICAL": logging.CRITICAL, "ERROR": logging.ERROR }
+	if(pargs.loglevel) and (loglevels.has_key(pargs.loglevel)):
+		set_logger(loglevels[pargs.loglevel])
+	else:
+		set_logger(logging.DEBUG)
+
+	# Check if all the mandatory options/arguments are specified or not
+	if(not pargs.jobflow):
+		l.error("Please specify the jobflow file path")
+		sys.exit(1)
+	
+	job_flow_config = get_job_flow_config(pargs.jobflow[0])
 	run_jobs(job_flow_config)
 
 
