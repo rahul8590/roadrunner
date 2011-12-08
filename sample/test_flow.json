@@ -1,0 +1,43 @@
+{
+	"output_plugin": "simpleout",
+	"default_job_timeout": "300",
+	"default_retries": "3",
+	"job_flow": [
+		{
+			"slot_id": "slot1",
+			"jobs": [
+ 				{
+					"job_id": "job1",
+					"success_constraint": "100%",
+					"parallelism": "50%",
+					"cmd": "ls -l txt; uname -a",
+					"hosts": [
+						"ops2.media.corp.mud.yahoo.com",
+						"opsdev1.media.corp.sp1.yahoo.com"
+					]
+				},
+				{
+					"job_id": "job2",
+					"success_constraint": "100%",
+					"cmd": "ls -l",
+					"hosts": [
+						"opsdev1.media.corp.sp1.yahoo.com"
+					]
+				}
+			]
+		},
+		{
+			"slot_id": "slot2",
+			"jobs": [
+				{
+					"job_id": "job3",
+					"success_constraint": "100%",
+					"cmd": "ls",
+					"hosts": [
+						"127.0.0.1"
+					]
+				}
+			]
+		}
+	]
+}
