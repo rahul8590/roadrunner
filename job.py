@@ -9,6 +9,30 @@ import gearman
 gearman_servers = ['localhost:4730']
 
 #
+# Utility function to convert the pct value
+# into number of hosts
+#
+def get_num_hosts(val, total):
+    try:
+        if val[-1] == '%':
+            num_hosts = (int(val[:-1]) * total) / 100
+        else:
+            num_hosts = int(val)
+
+            # Atleast one host should succeed
+            if num_hosts <= 0:
+                num_hosts = 1
+                
+        if num_hosts > total:
+            num_hosts = total
+
+    except ValueError:
+        num_hosts = None
+
+    return num_hosts
+
+
+#
 # Job class
 #
 class Job:
@@ -28,6 +52,7 @@ class Job:
         self._gmjobs = []
         self._gmclient = None
         self._completed_gmjobs = []
+
 
     def run(self):
         global gearman_servers
@@ -50,12 +75,21 @@ class Job:
             sys.exit(1)
 
         # Gearman client should now submit tasks to the gearman workers
-        gmjobs = []
-        for host in self._hosts:
-            gmjobs.append(dict(task=task_name, data="hey " + str(host)))
-        self._gmclient = gearman.GearmanClient(gearman_servers)
-        self._gmjobs = self._gmclient.submit_multiple_jobs(gmjobs, wait_until_complete=False,
-                                                     background=False, max_retries=self._retries)
+        # We submit jobs based on what is specified in parallelism
+        self._gmclient = gmclient = gearman.GearmanClient(gearman_servers)
+        num_hosts = len(self._hosts)
+        num_parallel = get_num_hosts(self._parallelism, num_hosts)
+        if num_parallel == None:
+            print "ERR: The parallelism key should be a positive number"
+            sys.exit(1)
+
+        for index, host in enumerate(self._hosts):
+            if num_hosts - (num_hosts - 1 - index) <= num_parallel: 
+                gmjob = gmclient.submit_job(task_name, "hey " + str(host), background=False, wait_until_complete=False, max_retries=self._retries)
+                self._gmjobs.append(gmjob)
+            else:
+                # If the number of parallel jobs limit is reached, poll
+                self.poll()
 
 
     def poll(self):
@@ -75,14 +109,11 @@ class Job:
 
 
     def success(self):
-        if self._success_constraint[-1] == '%':
-            num_hosts = (int(self._success_constraint[:-1]) * len(self._hosts)) / 100
-        else:
-            num_hosts = int(self._success_constraint)
-
-        # Atleast one host should succeed
-        if num_hosts == 0:
-            num_hosts = 1
+        # Convert pct values into numbers
+        num_hosts = get_num_hosts(self._success_constraint, len(self._hosts))
+        if num_hosts == None:
+            print "ERR: The success_constraint should be a positive number"
+            sys.exit(1)
 
         # Check the status codes for each host
         success_count = 0
