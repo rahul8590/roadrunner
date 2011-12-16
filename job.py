@@ -83,14 +83,20 @@ class Job:
             print "ERR: The parallelism key should be a positive number"
             sys.exit(1)
 
-        for index, host in enumerate(self._hosts):
-            if num_hosts - (num_hosts - 1 - index) <= num_parallel: 
-                gmjob = gmclient.submit_job(task_name, "hey " + str(host), background=False, wait_until_complete=False, max_retries=self._retries)
-                self._gmjobs.append(gmjob)
-            else:
-                # If the number of parallel jobs limit is reached, poll
-                self.poll()
-
+        start = 0
+        while True:
+            for i in range(start, start + num_parallel):
+                try:
+                    host = str(self._hosts[i]) # Gearman fails on unicode strings
+                    gmjob = gmclient.submit_job(task_name, "hey " + str(host), background=False, wait_until_complete=False, max_retries=self._retries)
+                    self._gmjobs.append(gmjob)
+                
+                except IndexError:
+                    return
+             
+            self.poll()
+            start = start + i + 1
+            
 
     def poll(self):
         self._completed_gmjobs = self._gmclient.wait_until_jobs_completed(self._gmjobs, poll_timeout=self._timeout)
