@@ -5,15 +5,10 @@ import gearman
 from gearman import GearmanWorker
 
 
-
-
-#executing the fab command . All the configurations are  mentioned in fabfile.py
+#executing the fab command.
+#gmJob contains json data  containing dict of host , pass , cmd[list data type]  ( to be executed) 
 def exe_job(gmWorker , gmJob ):
- #host = 'synergy.corp.yahoo.com'
- #d = json.loads(gmJob)
- #run (str(d[cmd]), str(d[host]))
  d = simplejson.loads(gmJob.data)
- #print d
  env.host_string = d['host'] 
  env.password = d['pass']  #will store the password .
  cmds = d['cmd']

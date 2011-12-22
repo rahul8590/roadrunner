@@ -3,6 +3,15 @@ Roadrunner
 
 Roadrunner is a job flow executor. You can submit a job flow (in the form of a json file) to Roadrunner and it will run the jobs in the order given in the flow and return the status and output to the contact person via email.
 
+
+Dependencies
+====================
+1. simplejson 2.3.0
+2. Gearman 0.9
+3. python gearman 2.0.2
+4. Fabric 1.3.3
+
+
 Example use cases
 ====================
 1. Deploy code to all the api hosts and if the job succeeds, then deploy to all the frontend hosts.
