@@ -2,6 +2,7 @@
 import os
 import sys
 import gearman
+import json
 
 #
 # Global variables
@@ -57,7 +58,7 @@ class Job:
     def run(self):
         global gearman_servers
         worker_found = False
-        task_name = 'ls'
+        task_name = 'exe_cmd'
 
         # Check if there are a workers that have the ssh job registered
         # If not, bail out
@@ -88,7 +89,8 @@ class Job:
             for i in range(start, start + num_parallel):
                 try:
                     host = str(self._hosts[i]) # Gearman fails on unicode strings
-                    gmjob = gmclient.submit_job(task_name, "hey " + str(host), background=False, wait_until_complete=False, max_retries=self._retries)
+                    worker_args = json.dumps('{host:' + host + ', command:' + self._command +'}')
+                    gmjob = gmclient.submit_job(task_name, worker_args, background=False, wait_until_complete=False, max_retries=self._retries)
                     self._gmjobs.append(gmjob)
                 
                 except IndexError:
