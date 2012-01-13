@@ -3,11 +3,14 @@ import os
 import sys
 import gearman
 import json
+from logger import Logger
 
 #
 # Global variables
 #
 gearman_servers = ['localhost:4730']
+l = Logger('JOBMANAGER').get()
+
 
 #
 # Utility function to convert the pct value
@@ -58,7 +61,7 @@ class Job:
     def run(self):
         global gearman_servers
         worker_found = False
-        task_name = 'exe_cmd'
+        task_name = 'exe_job'
 
         # Check if there are a workers that have the ssh job registered
         # If not, bail out
@@ -70,9 +73,9 @@ class Job:
                 break
 
         if worker_found:
-            print "DBG: Found atleast one worker with the task: " + task_name + " registered"
+            l.debug("Found atleast one worker with the task: " + task_name + " registered")
         else:
-            print "ERR: Did not find any workers with the task: " + task_name + " registered"
+            l.error("Did not find any workers with the task: " + task_name + " registered")
             sys.exit(1)
 
         # Gearman client should now submit tasks to the gearman workers
@@ -81,7 +84,7 @@ class Job:
         num_hosts = len(self._hosts)
         num_parallel = get_num_hosts(self._parallelism, num_hosts)
         if num_parallel == None:
-            print "ERR: The parallelism key should be a positive number"
+            l.error("The parallelism key should be a positive number")
             sys.exit(1)
 
         start = 0
@@ -89,6 +92,9 @@ class Job:
             for i in range(start, start + num_parallel):
                 try:
                     host = str(self._hosts[i]) # Gearman fails on unicode strings
+                    debug_str = "job_id: " + self._job_id + ", command: " + self._command
+                    debug_str += ", host: " + host + ", retries: " + str(self._retries)
+                    l.debug("Submitting job with the following attributes to the gearman worker: " + debug_str)
                     worker_args = json.dumps('{host:' + host + ', command:' + self._command +'}')
                     gmjob = gmclient.submit_job(task_name, worker_args, background=False, wait_until_complete=False, max_retries=self._retries)
                     self._gmjobs.append(gmjob)
@@ -120,7 +126,7 @@ class Job:
         # Convert pct values into numbers
         num_hosts = get_num_hosts(self._success_constraint, len(self._hosts))
         if num_hosts == None:
-            print "ERR: The success_constraint should be a positive number"
+            l.error("The success_constraint should be a positive number")
             sys.exit(1)
 
         # Check the status codes for each host

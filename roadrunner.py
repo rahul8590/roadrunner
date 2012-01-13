@@ -5,26 +5,13 @@ import logging
 import sys
 import argparse
 from job import Job
+from logger import Logger
 
 
 #
-# Global variables
+# Global logger variable
 #
-l = None  # Logger variable
-
-
-#
-# Initialize log level and return the logger object
-#
-def set_logger(log_level):
-    global l
-    l = logging.getLogger('roadrunner')
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-    handler.setFormatter(formatter)
-    l.addHandler(handler)
-    if(log_level):
-        l.setLevel(log_level)
+l = Logger('ROADRUNNER').get()
 
 
 #
@@ -32,7 +19,6 @@ def set_logger(log_level):
 # and return the constructed object
 #
 def get_job_flow_config(json_file):
-    global l
     job_flow_config = None
     try:
         f = open(os.path.abspath(json_file), 'r')
@@ -55,7 +41,6 @@ def get_job_flow_config(json_file):
 # If yes, return it's value or return None
 #
 def get_dict_val(key, dic, exit_on_error=False):
-    global l
     if(dic.has_key(key)):
         return dic[key]
     else:
@@ -70,8 +55,6 @@ def get_dict_val(key, dic, exit_on_error=False):
 # Run the jobs according to the job flow
 #
 def run_jobs(job_flow_config):
-    global l
-
     # Mandatory fields required in a job flow config
     output_plugin = get_dict_val('output_plugin', job_flow_config, True)
     flow = get_dict_val('job_flow', job_flow_config, True)
@@ -82,8 +65,9 @@ def run_jobs(job_flow_config):
         jobs = get_dict_val('jobs', slot, True)
         slot_id = get_dict_val('slot_id', slot, True)
         job_pool = []
-
+        
         for job in jobs:
+            
             # Mandatory fields that need to be present (for a job)
             job_id = get_dict_val('job_id', job, True)
             cmd = get_dict_val('cmd', job, True)
@@ -105,8 +89,6 @@ def run_jobs(job_flow_config):
 
             j = Job(job_id, timeout, retries, success_constraint, parallelism, cmd, hosts)
 
-            print "Running job> " + job_id
-
             l.debug("slot_id: " + slot_id + ", job_id: " + job_id +
                     ", timeout: " + timeout + ", retries: " + retries +
                     ", success_constraint: " + success_constraint +
@@ -125,7 +107,7 @@ def run_jobs(job_flow_config):
             if job.success():
                 pass
             else:
-                l.error("Job " + job._job_id + "failed! Exiting the job flow")
+                l.error("Job " + job._job_id + " failed! Exiting the job flow")
                 sys.exit(1)
 
 
@@ -133,11 +115,9 @@ def run_jobs(job_flow_config):
 # Parse commandline arguments
 #
 def parse_args():
-    global l
     args = sys.argv
     parser = argparse.ArgumentParser()
     parser.add_argument('--jobflow', action='store', nargs=1, help='The path to the jobflow config file')
-    parser.add_argument('--debug', action='store_true', default=None, help='Print debug output')
     return parser.parse_args(args[1:])
 
 
@@ -146,13 +126,6 @@ def parse_args():
 #
 def main():
     pargs = parse_args() # Args after being parsed
-
-    # Check to see if --debug is specified
-    if(pargs.debug):
-        log_level = logging.DEBUG
-    else:
-        log_level = None
-    set_logger(log_level)
 
     # Check if all the mandatory options/arguments are specified or not
     if(not pargs.jobflow):
