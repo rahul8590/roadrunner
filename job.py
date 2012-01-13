@@ -63,51 +63,62 @@ class Job:
         worker_found = False
         task_name = 'exe_job'
 
-        # Check if there are a workers that have the ssh job registered
-        # If not, bail out
-        gmadmin = gearman.GearmanAdminClient(gearman_servers)
-        stats = list(gmadmin.get_status())
-        for stat in stats:
-            if stat['task'] == task_name and stat['workers'] > 0:
-                worker_found = True
-                break
+        try:
+            # Check if there are a workers that have the ssh job registered
+            # If not, bail out
+            gmadmin = gearman.GearmanAdminClient(gearman_servers)
+            stats = list(gmadmin.get_status())
+            for stat in stats:
+                if stat['task'] == task_name and stat['workers'] > 0:
+                    worker_found = True
+                    break
 
-        if worker_found:
-            l.debug("Found atleast one worker with the task: " + task_name + " registered")
-        else:
-            l.error("Did not find any workers with the task: " + task_name + " registered")
+            if worker_found:
+                l.debug("Found atleast one worker with the task: " + task_name + " registered")
+            else:
+                l.error("Did not find any workers with the task: " + task_name + " registered")
+                sys.exit(1)
+
+            # Gearman client should now submit tasks to the gearman workers
+            # We submit jobs based on what is specified in parallelism
+            self._gmclient = gmclient = gearman.GearmanClient(gearman_servers)
+            num_hosts = len(self._hosts)
+            num_parallel = get_num_hosts(self._parallelism, num_hosts)
+            if num_parallel == None:
+                l.error("The parallelism key should be a positive number")
+                sys.exit(1)
+
+            start = 0
+            while True:
+                for i in range(start, start + num_parallel):
+                    try:
+                        host = str(self._hosts[i]) # Gearman fails on unicode strings
+                        debug_str = "job_id: " + self._job_id + ", command: " + self._command
+                        debug_str += ", host: " + host + ", retries: " + str(self._retries)
+                        l.debug("Submitting job with the following attributes to the gearman worker: " + debug_str)
+                        worker_args = json.dumps('{host:' + host + ', command:' + self._command +'}')
+                        gmjob = gmclient.submit_job(task_name, worker_args, background=False, wait_until_complete=False, max_retries=self._retries)
+                        self._gmjobs.append(gmjob)
+
+                    except IndexError:
+                        return
+
+                self.poll()
+                start = start + i + 1
+
+        except gearman.errors.ServerUnavailable:
+            l.error("Gearman server(s): " + str(gearman_servers) + " not available!")
             sys.exit(1)
 
-        # Gearman client should now submit tasks to the gearman workers
-        # We submit jobs based on what is specified in parallelism
-        self._gmclient = gmclient = gearman.GearmanClient(gearman_servers)
-        num_hosts = len(self._hosts)
-        num_parallel = get_num_hosts(self._parallelism, num_hosts)
-        if num_parallel == None:
-            l.error("The parallelism key should be a positive number")
-            sys.exit(1)
-
-        start = 0
-        while True:
-            for i in range(start, start + num_parallel):
-                try:
-                    host = str(self._hosts[i]) # Gearman fails on unicode strings
-                    debug_str = "job_id: " + self._job_id + ", command: " + self._command
-                    debug_str += ", host: " + host + ", retries: " + str(self._retries)
-                    l.debug("Submitting job with the following attributes to the gearman worker: " + debug_str)
-                    worker_args = json.dumps('{host:' + host + ', command:' + self._command +'}')
-                    gmjob = gmclient.submit_job(task_name, worker_args, background=False, wait_until_complete=False, max_retries=self._retries)
-                    self._gmjobs.append(gmjob)
-                
-                except IndexError:
-                    return
-             
-            self.poll()
-            start = start + i + 1
-            
 
     def poll(self):
-        self._completed_gmjobs = self._gmclient.wait_until_jobs_completed(self._gmjobs, poll_timeout=self._timeout)
+        try:
+            self._completed_gmjobs = self._gmclient.wait_until_jobs_completed(self._gmjobs, poll_timeout=self._timeout)
+
+        except gearman.errors.ServerUnavailable:
+            l.error("Gearman server(s): " + str(gearman_servers) + " not available!")
+            sys.exit(1)
+
         for index, gmjob in enumerate(self._completed_gmjobs):
             host = self._hosts[index]
             if gmjob.state == gearman.job.JOB_COMPLETE:
