@@ -59,7 +59,7 @@ def get_dict_val(key, dic, exit_on_error=False):
 def subprocess_wrapper(j):
     j.run()
     j.poll()
-    l.debug("Job: " + j._job_id + " individual task rcs: " + str(j._rcs))
+    l.debug("Job: " + j._job_id + " return codes: " + str(j._rcs))
     if j.success():
         l.debug("Job: " + j._job_id + " executed successfully!")
     else:
@@ -76,9 +76,9 @@ def run_jobs(job_flow_config):
     flow = get_dict_val('job_flow', job_flow_config, True)
     default_timeout = get_dict_val('default_job_timeout', job_flow_config, True)
     default_retries = get_dict_val('default_retries', job_flow_config, True)
-    process_pool = []
 
     for slot in flow:
+        process_pool = []
         jobs = get_dict_val('jobs', slot, True)
         slot_id = get_dict_val('slot_id', slot, True)
         
