@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import os
 import sys
 import gearman
 import json
@@ -59,7 +58,6 @@ class Job:
 
 
     def run(self):
-        global gearman_servers
         worker_found = False
         task_name = 'exe_job'
 
@@ -79,6 +77,7 @@ class Job:
                 l.error("Did not find any workers with the task: " + task_name + " registered")
                 sys.exit(1)
 
+
             # Gearman client should now submit tasks to the gearman workers
             # We submit jobs based on what is specified in parallelism
             self._gmclient = gmclient = gearman.GearmanClient(gearman_servers)
@@ -96,7 +95,7 @@ class Job:
                         debug_str = "job_id: " + self._job_id + ", command: " + self._command
                         debug_str += ", host: " + host + ", retries: " + str(self._retries)
                         l.debug("Submitting job with the following attributes to the gearman worker: " + debug_str)
-                        worker_args = json.dumps('{host:' + host + ', command:' + self._command +'}')
+                        worker_args = json.dumps({ "host": host, "command": self._command })
                         gmjob = gmclient.submit_job(task_name, worker_args, background=False, wait_until_complete=False, max_retries=self._retries)
                         self._gmjobs.append(gmjob)
 
@@ -120,17 +119,17 @@ class Job:
             sys.exit(1)
 
         for index, gmjob in enumerate(self._completed_gmjobs):
-            host = self._hosts[index]
+            unique = gmjob.job.unique
             if gmjob.state == gearman.job.JOB_COMPLETE:
-                self._rcs[host] = 0
+                self._rcs[unique] = 0
             elif gmjob.state == gearman.job.JOB_FAILED:
-                self._rcs[host] = 1
+                self._rcs[unique] = 1
             elif gmjob.state == gearman.job.JOB_UNKNOWN:
-                self._rcs[host] = 2
+                self._rcs[unique] = 2
             else:
-                self._rcs[host] = 3
+                self._rcs[unique] = 3
 
-            self._output[host] = gmjob.result
+            self._output[unique] = gmjob.result
 
 
     def success(self):

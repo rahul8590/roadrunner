@@ -4,6 +4,7 @@ import json
 import logging
 import sys
 import argparse
+from multiprocessing import Process
 from job import Job
 from logger import Logger
 
@@ -41,14 +42,29 @@ def get_job_flow_config(json_file):
 # If yes, return it's value or return None
 #
 def get_dict_val(key, dic, exit_on_error=False):
-    if(dic.has_key(key)):
+    if dic.has_key(key):
         return dic[key]
     else:
-        if(exit_on_error):
+        if exit_on_error:
             l.error("Key: " + key + " not found. Please make sure it is present!")
             sys.exit(1)
         else:
             return None
+
+
+#
+# The function that will be run by the thread
+# The thread will execute a job and wait for it to complete
+#
+def subprocess_wrapper(j):
+    j.run()
+    j.poll()
+    l.debug("Job: " + j._job_id + " individual task rcs: " + str(j._rcs))
+    if j.success():
+        l.debug("Job: " + j._job_id + " executed successfully!")
+    else:
+        l.error("Job: " + j._job_id + " failed!")
+        sys.exit(1)
 
 
 #
@@ -60,11 +76,11 @@ def run_jobs(job_flow_config):
     flow = get_dict_val('job_flow', job_flow_config, True)
     default_timeout = get_dict_val('default_job_timeout', job_flow_config, True)
     default_retries = get_dict_val('default_retries', job_flow_config, True)
+    process_pool = []
 
     for slot in flow:
         jobs = get_dict_val('jobs', slot, True)
         slot_id = get_dict_val('slot_id', slot, True)
-        job_pool = []
         
         for job in jobs:
             
@@ -94,20 +110,24 @@ def run_jobs(job_flow_config):
                     ", success_constraint: " + success_constraint +
                     ", parallelism: " + str(parallelism) + ", cmd: " + cmd + ", hosts: " + str(hosts))
 
-            j.run()
-            job_pool.append(j)
+            # Spawn a thread per job
+            try:
+                p = Process(target=subprocess_wrapper, args=(j,))
+                p.start()
+                process_pool.append(p)
 
-        # For each of the jobs in the job pool, poll if the job has completed
-        # If the job is complete, check if all the jobs have executed successfully
-        # If yes, move to the next slot
-        for job in job_pool:
-            job.poll()
+            except:
+                l.error("Unable to spawn a process for job: " + j._job_id)
+                sys.exit(1)
 
-        for job in job_pool:
-            if job.success():
-                pass
-            else:
-                l.error("Job " + job._job_id + " failed! Exiting the job flow")
+
+        # Wait for all the processes to complete
+        for p in process_pool:
+            try:
+                p.join()
+
+            except:
+                l.error("An unexpected error occurred while fetching info from the subprocess!")
                 sys.exit(1)
 
 
@@ -128,7 +148,7 @@ def main():
     pargs = parse_args() # Args after being parsed
 
     # Check if all the mandatory options/arguments are specified or not
-    if(not pargs.jobflow):
+    if not pargs.jobflow:
         l.error("Please specify the jobflow file path")
         sys.exit(1)
     
