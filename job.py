@@ -22,9 +22,9 @@ def get_num_hosts(val, total):
         else:
             num_hosts = int(val)
 
-            # Atleast one host should succeed
-            if num_hosts <= 0:
-                num_hosts = 1
+        # Atleast one host should succeed
+        if num_hosts <= 0:
+            num_hosts = 1
                 
         if num_hosts > total:
             num_hosts = total
@@ -49,8 +49,8 @@ class Job:
         self._parallelism = parallelism
         self._command = command
         self._hosts = hosts
-        self._rcs = {} # Individual return codes for each host
-        self._output = {} # Ouputs per host in the job
+        self._rcs = {} # Individual return codes for each individual gearman job
+        self._output = {} # Ouputs per individual gearman job
         self._success = False
         self._gmjobs = []
         self._gmclient = None
@@ -83,6 +83,7 @@ class Job:
             self._gmclient = gmclient = gearman.GearmanClient(gearman_servers)
             num_hosts = len(self._hosts)
             num_parallel = get_num_hosts(self._parallelism, num_hosts)
+
             if num_parallel == None:
                 l.error("The parallelism key should be a positive number")
                 sys.exit(1)
@@ -96,7 +97,7 @@ class Job:
                         debug_str += ", host: " + host + ", retries: " + str(self._retries)
                         l.debug("Submitting job with the following attributes to the gearman worker: " + debug_str)
                         worker_args = json.dumps({ "host": host, "command": self._command })
-                        gmjob = gmclient.submit_job(task_name, worker_args, background=False, wait_until_complete=False, max_retries=self._retries)
+                        gmjob = gmclient.submit_job(task_name, worker_args, background=False, wait_until_complete=False)
                         self._gmjobs.append(gmjob)
 
                     except IndexError:

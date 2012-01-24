@@ -1,26 +1,38 @@
-import sys , os , simplejson
+#!/usr/bin/env python
+import sys
+import json
+import gearman
 from fabric import *
 from fabric.api import *
-import gearman
 from gearman import GearmanWorker
 
 
-#executing the fab command.
-#gmJob contains json data  containing dict of host , pass , cmd[list data type]  ( to be executed) 
-def exe_job(gmWorker , gmJob ):
- d = simplejson.loads(gmJob.data)
- env.host_string = d['host'] 
- env.password = d['pass']  #will store the password .
- cmds = d['cmd']
- print cmds
- for i in cmds:
-  sudo (i )	
- return "job sucessfull"
-	
-  
-#woker node id to be specified in here
-gm_worker = gearman.GearmanWorker(['localhost:4730'])
-#gm_worker.set_client_id('client1')
-gm_worker.register_task('exe_job',exe_job)
-gm_worker.work()
+#
+# Run the ssh task
+#
+def exe_job(worker, job):
+    d = json.loads(job.data)
+    env.host_string = d['host'] 
+    cmd = d['command']
 
+    # Run the fabric command. Do not abort on exit
+    with settings(warn_only=True):
+        result = run(cmd)
+
+    if result.failed:
+        job.send_fail()
+
+    return str(result)
+
+
+#
+# Main function
+#
+def main():
+    gm_worker = gearman.GearmanWorker(['localhost:4730'])
+    gm_worker.register_task('exe_job',exe_job) 
+    gm_worker.work()
+
+
+if __name__ == '__main__':
+    main()
