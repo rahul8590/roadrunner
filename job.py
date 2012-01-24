@@ -96,7 +96,7 @@ class Job:
                         debug_str = "job_id: " + self._job_id + ", command: " + self._command
                         debug_str += ", host: " + host + ", retries: " + str(self._retries)
                         l.debug("Submitting job with the following attributes to the gearman worker: " + debug_str)
-                        worker_args = json.dumps({ "host": host, "command": self._command })
+                        worker_args = json.dumps({ "host": host, "command": self._command, "retries": str(self._retries) })
                         gmjob = gmclient.submit_job(task_name, worker_args, background=False, wait_until_complete=False)
                         self._gmjobs.append(gmjob)
 

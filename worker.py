@@ -14,15 +14,29 @@ def exe_job(worker, job):
     d = json.loads(job.data)
     env.host_string = d['host'] 
     cmd = d['command']
+    retries = int(d['retries'])
+    output = ""
 
     # Run the fabric command. Do not abort on exit
-    with settings(warn_only=True):
-        result = run(cmd)
+    while retries > 0:
+        with settings(warn_only=True):
+            result = run(cmd)
+            output = output + str(result)
 
-    if result.failed:
-        job.send_fail()
+        if result.failed:
+            if retries == 1:
+                job.send_fail()
+                break
+            
+            else:
+                next
 
-    return str(result)
+        else:
+            break
+
+        retries = retries - 1
+
+    return output
 
 
 #
