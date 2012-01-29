@@ -121,8 +121,12 @@ class Job:
 
         for index, gmjob in enumerate(self._completed_gmjobs):
             unique = gmjob.job.unique
+            output = json.loads(gmjob.result)
             if gmjob.state == gearman.job.JOB_COMPLETE:
-                self._rcs[unique] = 0
+                if output["rc"] == -1:
+                    self._rcs[unique] = output["rc"]
+                else:
+                    self._rcs[unique] = 0
             elif gmjob.state == gearman.job.JOB_FAILED:
                 self._rcs[unique] = 1
             elif gmjob.state == gearman.job.JOB_UNKNOWN:
@@ -130,7 +134,7 @@ class Job:
             else:
                 self._rcs[unique] = 3
 
-            self._output[unique] = gmjob.result
+            self._output[unique] = output["output"]
 
 
     def success(self):

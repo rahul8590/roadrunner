@@ -59,7 +59,6 @@ def get_dict_val(key, dic, exit_on_error=False):
 def subprocess_wrapper(j):
     j.run()
     j.poll()
-    l.debug("Job: " + j._job_id + " return codes: " + str(j._rcs))
     if j.success():
         l.debug("Job: " + j._job_id + " executed successfully!")
     else:

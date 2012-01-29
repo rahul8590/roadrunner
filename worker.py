@@ -16,8 +16,11 @@ def exe_job(worker, job):
     cmd = d['command']
     retries = int(d['retries'])
     output = ""
+    rc = -1
 
     # Run the fabric command. Do not abort on exit
+    # Run job for the given number of retries
+    tmp_retries = retries;
     while retries > 0:
         with settings(warn_only=True):
             result = run(cmd)
@@ -25,18 +28,16 @@ def exe_job(worker, job):
 
         if result.failed:
             if retries == 1:
-                job.send_fail()
-                break
-            
+                rc = -1
             else:
                 next
-
         else:
+            rc = 0
             break
 
         retries = retries - 1
-
-    return output
+    
+    return json.dumps({ "rc": rc, "output": output })
 
 
 #
