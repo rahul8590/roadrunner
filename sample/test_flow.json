@@ -1,42 +1,28 @@
 {
-	"output_plugin": "simpleout",
-	"default_job_timeout": "300",
+	"default_job_timeout": "10",
 	"default_retries": "3",
 	"job_flow": [
 		{
 			"slot_id": "slot1",
 			"jobs": [
- 				{
+				{
 					"job_id": "job1",
 					"success_constraint": "100%",
-					"parallelism": "50%",
-					"cmd": "ls -l txt; uname -a",
+                    "parallelism": "50%",
+					"cmd": "ls -l txt",
 					"hosts": [
 						"localhost",
 						"localhost"
 					]
 				},
-				{
+                {
 					"job_id": "job2",
 					"success_constraint": "100%",
-					"cmd": "ls -l",
+					"cmd": "ls; uname -a",
 					"hosts": [
 						"localhost"
-					]
-				}
-			]
-		},
-		{
-			"slot_id": "slot2",
-			"jobs": [
-				{
-					"job_id": "job3",
-					"success_constraint": "100%",
-					"cmd": "ls",
-					"hosts": [
-						"127.0.0.1"
-					]
-				}
+                    ]
+                }
 			]
 		}
 	]
