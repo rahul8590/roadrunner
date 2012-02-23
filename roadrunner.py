@@ -61,8 +61,10 @@ def subprocess_wrapper(j):
     j.poll()
     if j.success():
         l.debug("Job: " + j._job_id + " executed successfully!")
+        j.output()
     else:
         l.error("Job: " + j._job_id + " failed!")
+        j.output()
         sys.exit(1)
 
 
@@ -71,7 +73,6 @@ def subprocess_wrapper(j):
 #
 def run_jobs(job_flow_config):
     # Mandatory fields required in a job flow config
-    output_plugin = get_dict_val('output_plugin', job_flow_config, True)
     flow = get_dict_val('job_flow', job_flow_config, True)
     default_timeout = get_dict_val('default_job_timeout', job_flow_config, True)
     default_retries = get_dict_val('default_retries', job_flow_config, True)

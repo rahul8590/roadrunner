@@ -37,7 +37,7 @@ def exe_job(worker, job):
 
         retries = retries - 1
     
-    return json.dumps({ "rc": rc, "output": output })
+    return json.dumps({ "rc": rc, "output": output, "host": d['host'] })
 
 
 #

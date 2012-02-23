@@ -134,7 +134,7 @@ class Job:
             else:
                 self._rcs[unique] = 3
 
-            self._output[unique] = output["output"]
+            self._output[unique] = (output["host"], output["output"])
 
 
     def success(self):
@@ -154,3 +154,10 @@ class Job:
             return True
         else:
             return False
+
+
+    def output(self):
+        # Pretty print the output
+        print "Job id: " + self._job_id
+        for gmjobid, output in self._output.items():
+            print "Output for host: " + output[0] + "\n" + output[1]
