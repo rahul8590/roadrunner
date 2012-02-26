@@ -4,6 +4,7 @@ import json
 import logging
 import sys
 import argparse
+import gevent
 from multiprocessing import Process
 from job import Job
 from logger import Logger
@@ -110,6 +111,9 @@ def run_jobs(job_flow_config):
                     ", success_constraint: " + success_constraint +
                     ", parallelism: " + str(parallelism) + ", cmd: " + cmd + ", hosts: " + str(hosts))
 
+
+### The multiprocessing code has to be replaced with the gevent spawning content ### 
+##looking for job asych function dispatcher
             # Spawn a thread per job
             try:
                 p = Process(target=subprocess_wrapper, args=(j,))
