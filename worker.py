@@ -6,6 +6,8 @@ from fabric import *
 from fabric.api import *
 from gearman import GearmanWorker
 
+#To run gearman , localhost:4730 port is being used
+
 
 #
 # Run the ssh task
